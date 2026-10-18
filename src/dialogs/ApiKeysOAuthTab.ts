@@ -1,8 +1,18 @@
+import { icon } from "@mariozechner/mini-lit";
 import { Button } from "@mariozechner/mini-lit/dist/Button.js";
 import { getProviders } from "@mariozechner/pi-ai";
 import { getAppStorage, SettingsTab } from "@mariozechner/pi-web-ui";
 import { html, type TemplateResult } from "lit";
+import { keyed } from "lit/directives/keyed.js";
+import { Plus, RefreshCw } from "lucide";
 import { Toast } from "../components/Toast.js";
+import {
+	customCacheKey,
+	deleteCustomProvider,
+	getCustomProviders,
+	refreshDiscoveredModels,
+	type SitegeistCustomProvider,
+} from "../models/catalog.js";
 import {
 	getOAuthProviderName,
 	isOAuthCredentials,
@@ -11,6 +21,7 @@ import {
 	parseOAuthCredentials,
 	serializeOAuthCredentials,
 } from "../oauth/index.js";
+import { CustomProviderDialog } from "./CustomProviderDialog.js";
 
 const OAUTH_PROVIDERS: OAuthProviderId[] = ["anthropic", "openai-codex", "github-copilot", "google-gemini-cli"];
 
@@ -39,6 +50,12 @@ export class ApiKeysOAuthTab extends SettingsTab {
 	private oauthStatuses: Record<string, "none" | "logged-in" | "logging-in" | "error"> = {};
 	private oauthErrors: Record<string, string> = {};
 	private deviceCode: string | null = null;
+	private customProviders: SitegeistCustomProvider[] = [];
+	private customCounts: Record<string, number | "error"> = {};
+	private refreshingCustom: Set<string> = new Set();
+	private pendingDelete: string | null = null;
+	private savedKeyProviders: Set<string> = new Set();
+	private keyInputVersion: Record<string, number> = {};
 
 	getTabName(): string {
 		return "API Keys & OAuth";
@@ -47,6 +64,82 @@ export class ApiKeysOAuthTab extends SettingsTab {
 	override async connectedCallback() {
 		super.connectedCallback();
 		await this.loadOAuthStatuses();
+		await this.loadCustomProviders();
+		await this.loadSavedKeys();
+	}
+
+	private async loadSavedKeys() {
+		const storage = getAppStorage();
+		const saved = new Set<string>();
+		for (const provider of await storage.providerKeys.list()) {
+			const value = await storage.providerKeys.get(provider);
+			if (value && !isOAuthCredentials(value)) saved.add(provider);
+		}
+		this.savedKeyProviders = saved;
+		this.requestUpdate();
+	}
+
+	private async removeKey(provider: string) {
+		await getAppStorage().providerKeys.delete(provider);
+		this.keyInputVersion[provider] = (this.keyInputVersion[provider] ?? 0) + 1;
+		Toast.success(`Removed ${provider} API key`);
+		await this.loadSavedKeys();
+	}
+
+	private renderKeyRow(provider: string): TemplateResult {
+		const version = this.keyInputVersion[provider] ?? 0;
+		return html`
+			<div class="flex items-end gap-2">
+				<div
+					class="flex-1 min-w-0"
+					@click=${() => {
+						// ponytail: provider-key-input emits no save event; re-read keys after its test-and-save round trip
+						setTimeout(() => this.loadSavedKeys(), 2500);
+					}}
+				>
+					${keyed(version, html`<provider-key-input .provider=${provider}></provider-key-input>`)}
+				</div>
+				${
+					this.savedKeyProviders.has(provider)
+						? Button({
+								variant: "ghost",
+								size: "sm",
+								onClick: () => this.removeKey(provider),
+								children: "Remove",
+							})
+						: ""
+				}
+			</div>
+		`;
+	}
+
+	private async loadCustomProviders() {
+		this.customProviders = await getCustomProviders();
+		const cache =
+			(await getAppStorage().settings.get<Record<string, { models: unknown[] }>>("discoveredModels")) ?? {};
+		for (const p of this.customProviders) {
+			const entry = cache[customCacheKey(p.id)];
+			this.customCounts[p.id] = entry ? entry.models.length : "error";
+		}
+		this.requestUpdate();
+	}
+
+	private async refreshCustom(p: SitegeistCustomProvider) {
+		this.refreshingCustom.add(p.id);
+		this.requestUpdate();
+		try {
+			await refreshDiscoveredModels({ keys: [customCacheKey(p.id)], force: true });
+		} finally {
+			this.refreshingCustom.delete(p.id);
+			await this.loadCustomProviders();
+		}
+	}
+
+	private async confirmDelete(p: SitegeistCustomProvider) {
+		await deleteCustomProvider(p.id);
+		this.pendingDelete = null;
+		Toast.success(`Removed ${p.name}`);
+		await this.loadCustomProviders();
 	}
 
 	private async loadOAuthStatuses() {
@@ -85,6 +178,9 @@ export class ApiKeysOAuthTab extends SettingsTab {
 			this.oauthStatuses[provider] = "logged-in";
 			this.deviceCode = null;
 			Toast.success(`Logged in to ${getOAuthProviderName(provider)}`);
+			refreshDiscoveredModels({ keys: [key], force: true }).catch((err) =>
+				console.warn(`Model discovery after login failed for ${key}:`, err),
+			);
 		} catch (error) {
 			console.error(`OAuth login failed for ${provider}:`, error);
 			this.oauthStatuses[provider] = "error";
@@ -178,7 +274,90 @@ export class ApiKeysOAuthTab extends SettingsTab {
 					</p>
 				</div>
 				<div class="flex flex-col gap-6">
-					${providers.map((provider) => html`<provider-key-input .provider=${provider}></provider-key-input>`)}
+					${providers.map((provider) => this.renderKeyRow(provider))}
+				</div>
+			</div>
+		`;
+	}
+
+	private renderCustomProvider(p: SitegeistCustomProvider): TemplateResult {
+		const count = this.customCounts[p.id];
+		const refreshing = this.refreshingCustom.has(p.id);
+		const deleting = this.pendingDelete === p.id;
+		return html`
+			<div class="flex items-center justify-between p-4 rounded-lg border border-border bg-card gap-3">
+				<div class="flex-1 min-w-0">
+					<div class="text-sm font-medium text-foreground truncate">${p.name}</div>
+					<div class="text-xs text-muted-foreground mt-1 truncate">${p.type} ${"\u2022"} ${p.baseUrl}</div>
+					<div class="text-xs text-muted-foreground mt-1">
+						${count === "error" ? html`<span class="text-destructive">Not reachable</span>` : `${count} models`}
+					</div>
+				</div>
+				<div class="flex gap-2">
+					${Button({
+						variant: "ghost",
+						size: "sm",
+						title: "Refresh models",
+						disabled: refreshing,
+						onClick: () => this.refreshCustom(p),
+						children: html`<span class="${refreshing ? "animate-spin" : ""}">${icon(RefreshCw, "sm")}</span>`,
+					})}
+					${Button({
+						variant: "outline",
+						size: "sm",
+						onClick: () => CustomProviderDialog.open(p, () => this.loadCustomProviders()),
+						children: "Edit",
+					})}
+					${
+						deleting
+							? html`${Button({ variant: "outline", size: "sm", onClick: () => this.confirmDelete(p), children: "Confirm delete" })}
+								${Button({
+									variant: "ghost",
+									size: "sm",
+									onClick: () => {
+										this.pendingDelete = null;
+										this.requestUpdate();
+									},
+									children: "Cancel",
+								})}`
+							: Button({
+									variant: "ghost",
+									size: "sm",
+									onClick: () => {
+										this.pendingDelete = p.id;
+										this.requestUpdate();
+									},
+									children: "Delete",
+								})
+					}
+				</div>
+			</div>
+		`;
+	}
+
+	private renderCustomProvidersSection(): TemplateResult {
+		return html`
+			<div class="flex flex-col gap-4">
+				<div class="flex items-start justify-between gap-4">
+					<div>
+						<h3 class="text-sm font-semibold text-foreground mb-2">Custom Providers</h3>
+						<p class="text-sm text-muted-foreground">
+							Local servers and OpenAI-compatible endpoints. Models are discovered from the server.
+						</p>
+					</div>
+					${Button({
+						variant: "default",
+						size: "sm",
+						onClick: () => CustomProviderDialog.open(undefined, () => this.loadCustomProviders()),
+						children: html`<span class="inline-flex items-center gap-1">${icon(Plus, "sm")} Add provider</span>`,
+					})}
+				</div>
+				<div class="flex flex-col gap-3">
+					${
+						this.customProviders.length === 0
+							? html`<div class="text-sm text-muted-foreground">No custom providers yet.</div>`
+							: this.customProviders.map((p) => this.renderCustomProvider(p))
+					}
 				</div>
 			</div>
 		`;
@@ -190,6 +369,8 @@ export class ApiKeysOAuthTab extends SettingsTab {
 				${this.renderOAuthSection()}
 				<div class="border-t border-border"></div>
 				${this.renderApiKeysSection()}
+				<div class="border-t border-border"></div>
+				${this.renderCustomProvidersSection()}
 			</div>
 		`;
 	}

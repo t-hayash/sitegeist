@@ -9,12 +9,11 @@ import {
 	type AgentState,
 	type AgentTool,
 } from "@mariozechner/pi-agent-core";
-import { getModel, getModels, type Model } from "@mariozechner/pi-ai";
+import { type Api, getModel, type Model } from "@mariozechner/pi-ai";
 import {
 	ChatPanel,
 	createExtractDocumentTool,
 	createStreamFn,
-	ModelSelector,
 	ProxyTab,
 	SettingsDialog,
 	// PersistentStorageDialog,
@@ -27,6 +26,7 @@ import { AboutTab } from "./dialogs/AboutTab.js";
 import { ApiKeyOrOAuthDialog } from "./dialogs/ApiKeyOrOAuthDialog.js";
 import { ApiKeysOAuthTab } from "./dialogs/ApiKeysOAuthTab.js";
 import { CostsTab } from "./dialogs/CostsTab.js";
+import { ModelPickerDialog } from "./dialogs/ModelPickerDialog.js";
 import { SessionCostDialog } from "./dialogs/SessionCostDialog.js";
 import { SitegeistSessionListDialog } from "./dialogs/SessionListDialog.js";
 import { SkillsTab } from "./dialogs/SkillsTab.js";
@@ -41,6 +41,14 @@ import {
 } from "./messages/NavigationMessage.js";
 import { registerUserMessageRenderer } from "./messages/UserMessageRenderer.js";
 import { createWelcomeMessage, registerWelcomeRenderer } from "./messages/WelcomeMessage.js";
+import {
+	findCustomProvider,
+	getAvailableModels,
+	getCustomProviders,
+	getProvidersWithCredentials,
+	refreshDiscoveredModels,
+} from "./models/catalog.js";
+import { type AvailableModel, customProviderRequest } from "./models/resolve.js";
 import { isOAuthCredentials, resolveApiKey } from "./oauth/index.js";
 import { SYSTEM_PROMPT } from "./prompts/prompts.js";
 import { SitegeistAppStorage } from "./storage/app-storage.js";
@@ -131,51 +139,47 @@ const DEFAULT_MODELS: Record<string, string> = {
 	zai: "glm-4.6",
 };
 
+/**
+ * Default model chain over the live catalog: saved model, DEFAULT_MODELS entry
+ * for a provider with credentials, first model of a provider with credentials.
+ * Returns undefined when nothing is available.
+ */
+async function resolveDefaultModel(): Promise<Model<Api> | undefined> {
+	const available = await getAvailableModels();
+	if (available.length === 0) return undefined;
+	const saved = await storage.settings.get<Model<Api>>("lastUsedModel");
+	if (saved) {
+		const match = available.find((a) => a.model.provider === saved.provider && a.model.id === saved.id);
+		if (match) return match.model;
+	}
+	const providers = await getProvidersWithCredentials();
+	for (const provider of providers) {
+		const wanted = DEFAULT_MODELS[provider];
+		const match = available.find((a) => a.model.provider === provider && (wanted ? a.model.id === wanted : true));
+		if (match) return match.model;
+	}
+	const byPriority = (a: AvailableModel, b: AvailableModel) => (a.priority ?? 999) - (b.priority ?? 999);
+	return [...available].sort(byPriority)[0]?.model;
+}
+
 async function selectDefaultModelForAvailableProvider() {
-	const providers = await getProvidersWithKeys();
-	if (providers.length === 0 || !agent) return;
-
-	// Try each provider with keys and find a default model
-	for (const provider of providers) {
-		const modelId = DEFAULT_MODELS[provider];
-		if (modelId) {
-			const model = getModel(provider as any, modelId);
-			if (model) {
-				agent.setModel(model);
-				await storage.settings.set("lastUsedModel", model);
-				await updateAuthLabel();
-				renderApp();
-				return;
-			}
-		}
-	}
-
-	// If no default found, try the first model for the first provider with a key
-	for (const provider of providers) {
-		const models = getModels(provider as any);
-		if (models.length > 0) {
-			agent.setModel(models[0]);
-			await storage.settings.set("lastUsedModel", models[0]);
-			await updateAuthLabel();
-			renderApp();
-			return;
-		}
-	}
+	if (!agent) return;
+	const model = await resolveDefaultModel();
+	if (!model) return;
+	agent.setModel(model);
+	await storage.settings.set("lastUsedModel", model);
+	await updateAuthLabel();
+	renderApp();
 }
 
 async function getProvidersWithKeys(): Promise<string[]> {
-	const providers = await storage.providerKeys.list();
-	const result: string[] = [];
-	for (const provider of providers) {
-		const key = await storage.providerKeys.get(provider);
-		if (key) result.push(provider);
-	}
-	return result;
+	return getProvidersWithCredentials();
 }
 
 async function hasAnyApiKey(): Promise<boolean> {
 	const providers = await storage.providerKeys.list();
-	return providers.length > 0;
+	if (providers.length > 0) return true;
+	return (await getCustomProviders()).length > 0;
 }
 
 function openApiKeysDialog(): Promise<void> {
@@ -194,13 +198,11 @@ async function updateAuthLabel() {
 	}
 	const provider = agent.state.model.provider;
 	const stored = await storage.providerKeys.get(provider);
-	if (!stored) {
-		authLabel = "";
-	} else if (isOAuthCredentials(stored)) {
-		authLabel = "subscription";
-	} else {
-		authLabel = "api key";
+	if (stored) {
+		authLabel = isOAuthCredentials(stored) ? "subscription" : "api key";
+		return;
 	}
+	authLabel = (await findCustomProvider(provider)) ? "custom" : "";
 }
 
 // Export getter for message transformer
@@ -352,31 +354,17 @@ const createAgent = async (initialState?: Partial<AgentState>, shouldSave = true
 	const corsProxyEnabled = await storage.settings.get<boolean>("proxy.enabled");
 	const corsProxyUrl = await storage.settings.get<string>("proxy.url");
 
-	// Determine default model: saved > default for a provider with key > gemini flash fallback
-	let defaultModel: Model<any> | undefined;
+	// Determine default model over the live catalog, then a credential-less Anthropic fallback
+	let defaultModel: Model<Api> | undefined;
 	if (!initialState?.model) {
-		const savedModel = await storage.settings.get<Model<any>>("lastUsedModel");
-		if (savedModel) {
-			defaultModel = savedModel;
-		} else {
-			// Try to find a default model for a provider the user already has a key for
-			const providersWithKeys = await getProvidersWithKeys();
-			for (const provider of providersWithKeys) {
-				const modelId = DEFAULT_MODELS[provider];
-				if (modelId) {
-					const model = getModel(provider as any, modelId);
-					if (model) {
-						defaultModel = model;
-						break;
-					}
-				}
-			}
-		}
+		defaultModel = await resolveDefaultModel();
+		if (!defaultModel) defaultModel = getModel("anthropic", "claude-sonnet-4-6");
 	}
-	// Final fallback
-	if (!defaultModel && !initialState?.model) {
-		defaultModel = getModel("anthropic", "claude-sonnet-4-6");
-	}
+	const streamWithProxy = createStreamFn(async () => {
+		const enabled = await storage.settings.get<boolean>("proxy.enabled");
+		if (!enabled) return undefined;
+		return (await storage.settings.get<string>("proxy.url")) || undefined;
+	});
 
 	agent = new Agent({
 		initialState: initialState || {
@@ -388,21 +376,26 @@ const createAgent = async (initialState?: Partial<AgentState>, shouldSave = true
 		},
 		convertToLlm: browserMessageTransformer,
 		toolExecution: "sequential",
-		streamFn: createStreamFn(async () => {
-			const enabled = await storage.settings.get<boolean>("proxy.enabled");
-			if (!enabled) return undefined;
-			return (await storage.settings.get<string>("proxy.url")) || undefined;
-		}),
+		streamFn: async (model, context, options) => {
+			const custom = await findCustomProvider(model.provider);
+			if (!custom) return streamWithProxy(model, context, options);
+			const request = customProviderRequest(model, custom);
+			return streamWithProxy(request.model, context, { ...options, apiKey: request.apiKey });
+		},
 		getApiKey: async (provider: string) => {
 			const stored = await storage.providerKeys.get(provider);
-			if (!stored) return undefined;
-			const proxyEnabled = await storage.settings.get<boolean>("proxy.enabled");
-			const proxyUrl = proxyEnabled ? (await storage.settings.get<string>("proxy.url")) || undefined : undefined;
-			return resolveApiKey(stored, provider, storage.providerKeys, proxyUrl);
+			if (stored) {
+				const proxyEnabled = await storage.settings.get<boolean>("proxy.enabled");
+				const proxyUrl = proxyEnabled ? (await storage.settings.get<string>("proxy.url")) || undefined : undefined;
+				return resolveApiKey(stored, provider, storage.providerKeys, proxyUrl);
+			}
+			// Custom credentials are resolved with their endpoint in streamFn, never with a saved session URL.
+			return undefined;
 		},
 	});
 
 	await updateAuthLabel();
+	refreshDiscoveredModels().catch((err) => console.warn("Background model refresh failed:", err));
 
 	if (shouldSave) {
 		agentUnsubscribe = agent.subscribe((event: AgentEvent) => {
@@ -462,24 +455,21 @@ const createAgent = async (initialState?: Partial<AgentState>, shouldSave = true
 			return chrome.runtime.getURL("sandbox.html");
 		},
 		onApiKeyRequired: async (provider: string) => {
+			if (await findCustomProvider(provider)) return true;
 			return await ApiKeyOrOAuthDialog.prompt(provider);
 		},
 		onModelSelect: async () => {
-			const providers = await getProvidersWithKeys();
-			if (providers.length === 0) {
+			const available = await getAvailableModels();
+			if (available.length === 0) {
 				openApiKeysDialog();
 				return;
 			}
-			ModelSelector.open(
-				agent.state.model,
-				(model) => {
-					agent.setModel(model);
-					chatPanel.agentInterface?.requestUpdate();
-					updateAuthLabel().catch(() => {});
-					renderApp();
-				},
-				providers,
-			);
+			ModelPickerDialog.open(agent.state.model, (model) => {
+				agent.setModel(model);
+				chatPanel.agentInterface?.requestUpdate();
+				updateAuthLabel().catch(() => {});
+				renderApp();
+			});
 		},
 		onBeforeSend: async () => {
 			if (!agent) return;

@@ -26,7 +26,7 @@ function decodeJwt(token: string): Record<string, unknown> | null {
 	}
 }
 
-function getAccountId(accessToken: string): string | null {
+export function getCodexAccountId(accessToken: string): string | null {
 	const payload = decodeJwt(accessToken);
 	const auth = payload?.[JWT_CLAIM_PATH] as Record<string, unknown> | undefined;
 	const accountId = auth?.chatgpt_account_id;
@@ -79,7 +79,7 @@ export async function loginOpenAICodex(): Promise<OAuthCredentials> {
 		throw new Error("Token response missing required fields");
 	}
 
-	const accountId = getAccountId(access);
+	const accountId = getCodexAccountId(access);
 	if (!accountId) throw new Error("Failed to extract accountId from token");
 
 	return {
@@ -109,7 +109,7 @@ export async function refreshOpenAICodex(credentials: OAuthCredentials): Promise
 		throw new Error("Token refresh response missing required fields");
 	}
 
-	const accountId = getAccountId(access);
+	const accountId = getCodexAccountId(access);
 	if (!accountId) throw new Error("Failed to extract accountId from refreshed token");
 
 	return {

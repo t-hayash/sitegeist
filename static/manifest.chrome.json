@@ -1,9 +1,10 @@
 {
 	"manifest_version": 3,
 	"minimum_chrome_version": "141",
-	"name": "sitegeist",
+	"name": "Sitegeist (feature test)",
 	"description": "Your AI companion for the web - Research, automate, create",
-	"version": "1.0.0",
+	"version": "1.1.0",
+	"version_name": "1.1.0-model-discovery",
 	"action": {
 		"default_title": "Click to open side panel"
 	},
