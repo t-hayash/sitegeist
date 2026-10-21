@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" version="26.0.0">
+  <diagram name="Sitegeist App Flow">
+    <mxGraphModel>
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ===== CHROME EXTENSION LAYER ===== -->
+        <mxCell id="2" value="Chrome Browser" style="swimlane;startSize=30;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="30" y="30" width="1200" height="180" as="geometry" />
+        </mxCell>
+
+        <mxCell id="3" value="Extension Icon Click&#xa;/ Keyboard Shortcut" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="2">
+          <mxGeometry x="30" y="70" width="160" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="4" value="Background&#xa;Service Worker" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="2">
+          <mxGeometry x="250" y="60" width="160" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="5" value="Chrome Side Panel&#xa;(sidepanel.html)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="2">
+          <mxGeometry x="480" y="60" width="160" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="6" value="Active Tab&#xa;(Web Page)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="2">
+          <mxGeometry x="710" y="60" width="160" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="7" value="Sandbox iframe&#xa;(sandbox.html)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="2">
+          <mxGeometry x="940" y="60" width="160" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Icon click to background -->
+        <mxCell id="8" value="open/toggle" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="2" source="3" target="4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Background to sidepanel -->
+        <mxCell id="9" value="opens" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="2" source="4" target="5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Tab navigation events to sidepanel -->
+        <mxCell id="10" value="tab URL / activate events" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="2" source="6" target="5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Sidepanel to sandbox -->
+        <mxCell id="11" value="JS REPL eval" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="2" source="5" target="7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ===== SIDEPANEL INTERNALS ===== -->
+        <mxCell id="20" value="Side Panel Internals" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="30" y="250" width="740" height="560" as="geometry" />
+        </mxCell>
+
+        <!-- Init flow -->
+        <mxCell id="21" value="initApp()" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="20">
+          <mxGeometry x="30" y="50" width="130" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="22" value="SitegeistAppStorage&#xa;(settings, sessions,&#xa;providerKeys, costs)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="20">
+          <mxGeometry x="210" y="40" width="160" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="23" value="Has API Key?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="20">
+          <mxGeometry x="420" y="40" width="130" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="24" value="WelcomeSetupDialog&#xa;+ Settings Dialog&#xa;+ ApiKey/OAuth Dialog" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="20">
+          <mxGeometry x="590" y="40" width="130" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="25" value="createAgent()&#xa;(with tools)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="20">
+          <mxGeometry x="30" y="160" width="130" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="26" value="ChatPanel&#xa;(pi-web-ui)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="20">
+          <mxGeometry x="210" y="160" width="130" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="27" value="Agent&#xa;(pi-agent-core)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="20">
+          <mxGeometry x="390" y="160" width="130" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="28" value="System Prompt +&#xa;NavigationMessage&#xa;(current URL/tab)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="20">
+          <mxGeometry x="570" y="150" width="150" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Tools group -->
+        <mxCell id="30" value="Agent Tools" style="swimlane;startSize=25;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="20">
+          <mxGeometry x="30" y="280" width="690" height="130" as="geometry" />
+        </mxCell>
+
+        <mxCell id="31" value="NavigateTool&#xa;(chrome.tabs)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="30">
+          <mxGeometry x="10" y="35" width="100" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="32" value="ReplTool&#xa;(JS sandbox)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="30">
+          <mxGeometry x="125" y="35" width="100" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="33" value="AskUserWhich&#xa;ElementTool" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="30">
+          <mxGeometry x="240" y="35" width="100" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="34" value="ExtractDocument&#xa;Tool (fetch)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="30">
+          <mxGeometry x="355" y="35" width="100" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="35" value="ExtractImageTool&#xa;(screenshot)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="30">
+          <mxGeometry x="470" y="35" width="100" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="36" value="SkillTool&#xa;(load skills)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="30">
+          <mxGeometry x="585" y="35" width="100" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Session management -->
+        <mxCell id="40" value="Session Management" style="swimlane;startSize=25;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="20">
+          <mxGeometry x="30" y="440" width="690" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="41" value="saveSession()&#xa;(on each response)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="40">
+          <mxGeometry x="10" y="35" width="140" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="42" value="SessionListDialog&#xa;(history)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="40">
+          <mxGeometry x="175" y="35" width="130" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="43" value="Session Locking&#xa;(multi-window via port)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="40">
+          <mxGeometry x="330" y="35" width="150" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="44" value="CostStore&#xa;(track API spend)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="40">
+          <mxGeometry x="510" y="35" width="140" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Init flow edges inside sidepanel internals -->
+        <mxCell id="50" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="20" source="21" target="22">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="51" value="check keys" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="20" source="22" target="23">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="52" value="no" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="20" source="23" target="24">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="53" value="yes / after setup" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="20" source="23" target="25">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="485" y="130" />
+              <mxPoint x="95" y="130" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="54" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="20" source="25" target="26">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="55" value="user sends message" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="20" source="26" target="27">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="56" value="inject context" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="20" source="28" target="27">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="57" value="tool calls" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="20" source="27" target="30">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="455" y="250" />
+              <mxPoint x="375" y="250" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="58" value="streaming response" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="20" source="27" target="26">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="350" y="220" />
+              <mxPoint x="380" y="220" />
+              <mxPoint x="380" y="210" />
+              <mxPoint x="305" y="210" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ===== AI PROVIDERS LAYER ===== -->
+        <mxCell id="60" value="AI Providers (pi-ai)" style="swimlane;startSize=30;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="810" y="250" width="420" height="260" as="geometry" />
+        </mxCell>
+
+        <mxCell id="61" value="Anthropic Claude" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="60">
+          <mxGeometry x="20" y="50" width="110" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="62" value="OpenAI / Codex" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="60">
+          <mxGeometry x="155" y="50" width="110" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="63" value="GitHub Copilot" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="60">
+          <mxGeometry x="290" y="50" width="110" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="64" value="Google Gemini" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="60">
+          <mxGeometry x="20" y="130" width="110" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="65" value="Groq / Mistral /&#xa;Huggingface / xAI&#xa;+ 10 more…" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="60">
+          <mxGeometry x="155" y="130" width="110" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="66" value="OAuth (PKCE /&#xa;Device Code Flow)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="60">
+          <mxGeometry x="290" y="130" width="110" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="67" value="resolveApiKey()&#xa;(refresh token if expired)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="60">
+          <mxGeometry x="100" y="200" width="220" height="45" as="geometry" />
+        </mxCell>
+
+        <!-- Edges inside providers -->
+        <mxCell id="68" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="60" source="61" target="67">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="69" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="60" source="62" target="67">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="70" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="60" source="63" target="67">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="71" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="60" source="64" target="67">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="72" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="60" source="65" target="67">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ===== STORAGE LAYER ===== -->
+        <mxCell id="80" value="Chrome Storage (IndexedDB)" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="30" y="860" width="740" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="81" value="Settings&#xa;(proxy, model)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="80">
+          <mxGeometry x="20" y="35" width="120" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="82" value="Sessions&#xa;(messages + metadata)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="80">
+          <mxGeometry x="175" y="35" width="140" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="83" value="ProviderKeys&#xa;(API keys / OAuth tokens)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="80">
+          <mxGeometry x="355" y="35" width="150" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="84" value="CostStore&#xa;(spend per provider)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="80">
+          <mxGeometry x="545" y="35" width="150" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- ===== CROSS-LAYER EDGES ===== -->
+
+        <!-- Sidepanel Agent to AI Providers -->
+        <mxCell id="90" value="API call (stream)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="27" target="60">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Sidepanel storage -->
+        <mxCell id="91" value="read/write" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="20" target="80">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Background port to sidepanel (session locking) -->
+        <mxCell id="92" value="session lock&#xa;(port messages)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;" edge="1" parent="1" source="4" target="43">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="330" y="210" />
+              <mxPoint x="330" y="700" />
+              <mxPoint x="483" y="700" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- REPL tool back to sandbox -->
+        <mxCell id="93" value="eval JS via&#xa;postMessage" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;" edge="1" parent="1" source="32" target="7">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="197" y="620" />
+              <mxPoint x="197" y="170" />
+              <mxPoint x="1020" y="170" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Navigate tool to active tab -->
+        <mxCell id="94" value="chrome.tabs&#xa;API" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;" edge="1" parent="1" source="31" target="6">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="113" y="600" />
+              <mxPoint x="113" y="160" />
+              <mxPoint x="790" y="160" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
