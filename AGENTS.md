@@ -8,6 +8,10 @@ If the user did not give you a concrete task, read README.md first.
 - The user runs `./dev.sh` in a separate tmux session. Do not run `npm run dev` or `npm run build`.
 - NEVER commit unless the user asks.
 
+## Working copy vs. running copy (Ted's MacBook Pro)
+- Develop in `~/Developer/repos/sitegeist`. Its `../mini-lit` and `../pi-mono` are symlinks to the pinned clones in `/Applications/Python`; don't edit them.
+- Brave loads the extension from `/Applications/Python/sitegeist/dist-chrome`. Never edit that copy; after pushing to `main`, run `./deploy.sh` there (tests, build, rollback on failure), then reload the extension in `brave://extensions`.
+
 ## Code Quality
 - No `any` types unless absolutely necessary
 - Check node_modules for external API type definitions instead of guessing
