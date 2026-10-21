@@ -17,11 +17,16 @@ fi
 
 before=$(git rev-parse HEAD)
 git pull --ff-only
-git diff --quiet "$before" HEAD -- $DEPS || sh -c "$INSTALL"
+if ! git diff --quiet "$before" HEAD -- $DEPS && ! sh -c "$INSTALL"; then
+  git reset -q --hard "$before"
+  sh -c "$INSTALL" || true
+  echo "Install failed; rolled back to $(git log -1 --format='%h %s')" >&2
+  exit 1
+fi
 
 if ! sh -c "$TEST"; then
   git reset -q --hard "$before"
-  sh -c "$INSTALL"
+  sh -c "$INSTALL" || true
   [ -z "$BUILD" ] || sh -c "$BUILD"
   echo "Tests failed; rolled back to $(git log -1 --format='%h %s')" >&2
   exit 1
